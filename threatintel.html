@@ -3,618 +3,157 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ThreatIntel Agent — Console de raisonnement</title>
+<title>ThreatIntel Agent</title>
 <style>
-  :root {
-    --bg: #0a0e14;
-    --panel: #10151d;
-    --panel-border: #1f2733;
-    --text: #d8dee9;
-    --text-dim: #6b7686;
-    --accent: #3ddc97;
-    --accent-dim: #1d6e4f;
-    --amber: #ffb454;
-    --red: #ff5c5c;
-    --mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
-    --sans: "Inter", -apple-system, sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    background-image:
-      radial-gradient(circle at 15% 10%, rgba(61, 220, 151, 0.06), transparent 40%),
-      radial-gradient(circle at 85% 90%, rgba(61, 220, 151, 0.04), transparent 40%);
-  }
-
-  .scanlines {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(255,255,255,0.012) 0px,
-      rgba(255,255,255,0.012) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-    z-index: 1;
-  }
-
-  .wrap {
-    max-width: 880px;
-    margin: 0 auto;
-    padding: 48px 24px 80px;
-    position: relative;
-    z-index: 2;
-  }
-
-  header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    border-bottom: 1px solid var(--panel-border);
-    padding-bottom: 20px;
-    margin-bottom: 32px;
-  }
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .brand-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 12px var(--accent);
-    animation: pulse 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
-  h1 {
-    font-size: 18px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    font-family: var(--mono);
-  }
-
-  .subtitle {
-    font-size: 12px;
-    color: var(--text-dim);
-    font-family: var(--mono);
-  }
-
-  .query-bar {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 28px;
-  }
-
-  .query-bar input {
-    flex: 1;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 6px;
-    padding: 14px 16px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 14px;
-    transition: border-color 0.2s;
-  }
-
-  .query-bar input:focus {
-    outline: none;
-    border-color: var(--accent-dim);
-  }
-
-  .query-bar input::placeholder {
-    color: var(--text-dim);
-  }
-
-  .query-bar button {
-    background: var(--accent);
-    color: #06120b;
-    border: none;
-    border-radius: 6px;
-    padding: 0 24px;
-    font-family: var(--mono);
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    transition: opacity 0.2s, transform 0.1s;
-    white-space: nowrap;
-  }
-
-  .query-bar button:hover { opacity: 0.85; }
-  .query-bar button:active { transform: scale(0.97); }
-  .query-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
-
-  .examples {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 36px;
-  }
-
-  .example-chip {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-dim);
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 20px;
-    padding: 6px 14px;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-  }
-
-  .example-chip:hover {
-    border-color: var(--accent-dim);
-    color: var(--accent);
-  }
-
-  /* ── Reasoning trace ─────────────────────────────────────────── */
-
-  .trace-panel {
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    overflow: hidden;
-    margin-bottom: 24px;
-    display: none;
-  }
-
-  .trace-panel.visible { display: block; }
-
-  .trace-header {
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--panel-border);
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .trace-body {
-    padding: 8px 0;
-  }
-
-  .step {
-    display: flex;
-    gap: 14px;
-    padding: 12px 20px;
-    opacity: 0;
-    transform: translateY(6px);
-    animation: stepIn 0.35s forwards;
-    border-bottom: 1px solid rgba(255,255,255,0.03);
-  }
-
-  .step:last-child { border-bottom: none; }
-
-  @keyframes stepIn {
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .step-icon {
-    flex-shrink: 0;
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    background: rgba(61, 220, 151, 0.1);
-    color: var(--accent);
-    margin-top: 1px;
-  }
-
-  .step-icon.error {
-    background: rgba(255, 92, 92, 0.1);
-    color: var(--red);
-  }
-
-  .step-text {
-    font-family: var(--mono);
-    font-size: 13px;
-    line-height: 1.6;
-    color: var(--text);
-  }
-
-  .step-text .error-text { color: var(--red); }
-
-  /* ── Verdict card ────────────────────────────────────────────── */
-
-  .verdict-card {
-    border-radius: 10px;
-    border: 1px solid var(--panel-border);
-    background: var(--panel);
-    padding: 28px;
-    display: none;
-  }
-
-  .verdict-card.visible {
-    display: block;
-    animation: stepIn 0.4s forwards;
-  }
-
-  .verdict-top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .verdict-label {
-    font-family: var(--mono);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-  }
-
-  .verdict-badge {
-    font-family: var(--mono);
-    font-size: 13px;
-    font-weight: 700;
-    padding: 6px 16px;
-    border-radius: 20px;
-  }
-
-  .verdict-badge.low { background: rgba(61, 220, 151, 0.15); color: var(--accent); }
-  .verdict-badge.medium { background: rgba(255, 180, 84, 0.15); color: var(--amber); }
-  .verdict-badge.high { background: rgba(255, 92, 92, 0.15); color: var(--red); }
-
-  .score-row {
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-    margin-bottom: 22px;
-  }
-
-  .score-num {
-    font-size: 40px;
-    font-weight: 700;
-    font-family: var(--mono);
-  }
-
-  .score-num.low { color: var(--accent); }
-  .score-num.medium { color: var(--amber); }
-  .score-num.high { color: var(--red); }
-
-  .score-max { color: var(--text-dim); font-size: 16px; }
-
-  .score-bar-track {
-    height: 6px;
-    background: rgba(255,255,255,0.06);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 24px;
-  }
-
-  .score-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    width: 0%;
-    transition: width 0.6s ease;
-  }
-
-  .score-bar-fill.low { background: var(--accent); }
-  .score-bar-fill.medium { background: var(--amber); }
-  .score-bar-fill.high { background: var(--red); }
-
-  .details-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-  }
-
-  .detail-item {
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--panel-border);
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
-
-  .detail-key {
-    font-family: var(--mono);
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--text-dim);
-    margin-bottom: 4px;
-  }
-
-  .detail-val {
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--text);
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-    color: var(--text-dim);
-    font-family: var(--mono);
-    font-size: 13px;
-  }
-
-  .empty-state.hidden { display: none; }
-
-  .error-banner {
-    background: rgba(255, 92, 92, 0.08);
-    border: 1px solid rgba(255, 92, 92, 0.25);
-    border-radius: 8px;
-    padding: 14px 18px;
-    color: var(--red);
-    font-family: var(--mono);
-    font-size: 13px;
-    margin-bottom: 24px;
-    display: none;
-  }
-
-  .error-banner.visible { display: block; }
-
-  .loading-dots span {
-    animation: blink 1.4s infinite;
-  }
-  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
-
-  @media (max-width: 600px) {
-    .details-grid { grid-template-columns: 1fr; }
-    .query-bar { flex-direction: column; }
-    .query-bar button { padding: 14px; }
-  }
+body{
+  background:#0a0e14;color:#d8dee9;font-family:Arial,sans-serif;
+  max-width:1000px;margin:auto;padding:40px;
+}
+input,button{
+  padding:12px;border-radius:6px;border:1px solid #1f2733;
+}
+input{width:70%;background:#10151d;color:#fff;}
+button{background:#3ddc97;border:none;cursor:pointer;}
+.card{
+  background:#10151d;border:1px solid #1f2733;
+  border-radius:10px;padding:20px;margin-top:20px;
+}
+.hidden{display:none;}
+pre{white-space:pre-wrap;}
 </style>
 </head>
 <body>
 
-<div class="scanlines"></div>
+<h1>THREATINTEL_AGENT</h1>
+<p>Console de raisonnement – Agent IA</p>
 
-<div class="wrap">
-
-  <header>
-    <div class="brand">
-      <div class="brand-dot"></div>
-      <div>
-        <h1>THREATINTEL_AGENT</h1>
-        <div class="subtitle">console de raisonnement // agent IA</div>
-      </div>
-    </div>
-    <div class="subtitle" id="clock"></div>
-    <div class="subtitle">
-  API :
-  <span id="apiStatus" style="color:#ffb454">Vérification...</span>
+<div>
+  <input id="queryInput" placeholder="Ex: 185.220.101.45">
+  <button id="analyzeBtn">Analyser</button>
 </div>
-  </header>
 
-  <div class="query-bar">
-    <input
-      type="text"
-      id="queryInput"
-      placeholder="ex: cette IP 185.220.101.45 est-elle suspecte ?"
-      autocomplete="off"
-    />
-    <button id="analyzeBtn" onclick="runAgent()">Analyser</button>
-  </div>
+<p>API : <span id="apiStatus">Vérification...</span></p>
 
-  <div class="examples">
-    <div class="example-chip" onclick="setQuery('Vérifie la réputation de 185.220.101.45')">185.220.101.45</div>
-    <div class="example-chip" onclick="setQuery('Ce domaine google.com est-il fiable ?')">google.com</div>
-    <div class="example-chip" onclick="setQuery('Analyse 1.1.1.1')">1.1.1.1</div>
-  </div>
+<div class="card hidden" id="errorCard">
+  <h3>Erreur</h3>
+  <div id="errorText"></div>
+</div>
 
-  <div class="error-banner" id="errorBanner"></div>
+<div class="card hidden" id="traceCard">
+  <h3>Trace de raisonnement</h3>
+  <div id="traceBody"></div>
+</div>
 
-  <div class="empty-state" id="emptyState">
-    &gt; en attente d'une requête...<br>
-    &gt; saisis une IP, un domaine, ou un hash ci-dessus
-  </div>
-
-  <div class="trace-panel" id="tracePanel">
-    <div class="trace-header">
-      <span>Trace de raisonnement</span>
-      <span id="traceStatus">en cours...</span>
-    </div>
-    <div class="trace-body" id="traceBody"></div>
-  </div>
-
-  <div class="verdict-card" id="verdictCard"></div>
-
+<div class="card hidden" id="resultCard">
+  <h3>Verdict</h3>
+  <div id="verdict"></div>
+  <hr>
+  <h3>Analyse IA</h3>
+  <pre id="llm-analysis">En attente...</pre>
 </div>
 
 <script>
-const queryInput = document.getElementById('queryInput');
-const analyzeBtn = document.getElementById('analyzeBtn');
-const tracePanel = document.getElementById('tracePanel');
-const traceBody = document.getElementById('traceBody');
-const traceStatus = document.getElementById('traceStatus');
-const verdictCard = document.getElementById('verdictCard');
-const emptyState = document.getElementById('emptyState');
-const errorBanner = document.getElementById('errorBanner');
+const API_URL = "http://192.168.130.5:5000/api/analyze";
 
-async function checkApi() {
-  try {
-    const r = await fetch('http://192.168.130.5:5000/');
-    document.getElementById('apiStatus').textContent = 'Connectée';
-    document.getElementById('apiStatus').style.color = '#3ddc97';
-  } catch {
-    document.getElementById('apiStatus').textContent = 'Déconnectée';
-    document.getElementById('apiStatus').style.color = '#ff5c5c';
+async function checkApi(){
+  const status = document.getElementById("apiStatus");
+  try{
+    await fetch("http://192.168.130.5:5000/");
+    status.textContent = "Connectée";
+    status.style.color = "#3ddc97";
+  }catch(e){
+    status.textContent = "Déconnectée";
+    status.style.color = "#ff5c5c";
   }
 }
-
 checkApi();
 
-// L'URL de l'API Flask. En local, le frontend est servi par Flask
-// lui-même donc une URL relative fonctionne directement.
-const API_URL = 'http://192.168.130.5:5000/api/analyze';
+document.getElementById("analyzeBtn")
+.addEventListener("click", runAgent);
 
-function setQuery(text) {
-  queryInput.value = text;
-  runAgent();
-}
-
-queryInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') runAgent();
+document.getElementById("queryInput")
+.addEventListener("keydown", e=>{
+  if(e.key==="Enter") runAgent();
 });
 
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleTimeString('fr-FR');
-}
-setInterval(updateClock, 1000);
-updateClock();
+async function runAgent(){
+  const query =
+      document.getElementById("queryInput").value.trim();
 
-async function runAgent() {
-  const query = queryInput.value.trim();
-  if (!query) return;
-
-  // Reset de l'UI
-  errorBanner.classList.remove('visible');
-  emptyState.classList.add('hidden');
-  verdictCard.classList.remove('visible');
-  verdictCard.innerHTML = '';
-  traceBody.innerHTML = '';
-  tracePanel.classList.add('visible');
-  traceStatus.innerHTML = 'en cours<span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>';
-  analyzeBtn.disabled = true;
-  analyzeBtn.textContent = 'Analyse...';
-
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Erreur inconnue côté serveur.');
-    }
-
-    renderTrace(data);
-    renderVerdict(data);
-
-  } catch (err) {
-    errorBanner.textContent = '✕ ' + err.message + ' — vérifie que le serveur Flask (app.py) est lancé.';
-    errorBanner.classList.add('visible');
-    traceStatus.textContent = 'échec';
-  } finally {
-    analyzeBtn.disabled = false;
-    analyzeBtn.textContent = 'Analyser';
-  }
-}
-
-function renderTrace(data) {
-  traceStatus.textContent = 'terminé';
-  const steps = data.reasoning_steps || [];
-  const errors = data.errors || [];
-
-  let delay = 0;
-  steps.forEach((step) => {
-    appendStep(step, false, delay);
-    delay += 80;
-  });
-  errors.forEach((err) => {
-    appendStep(err, true, delay);
-    delay += 80;
-  });
-}
-
-function appendStep(text, isError, delay) {
-  const row = document.createElement('div');
-  row.className = 'step';
-  row.style.animationDelay = delay + 'ms';
-
-  const icon = document.createElement('div');
-  icon.className = 'step-icon' + (isError ? ' error' : '');
-  icon.textContent = isError ? '!' : '›';
-
-  const txt = document.createElement('div');
-  txt.className = 'step-text' + (isError ? ' error-text' : '');
-  txt.textContent = text;
-
-  row.appendChild(icon);
-  row.appendChild(txt);
-  traceBody.appendChild(row);
-}
-
-function renderVerdict(data) {
-  const verdict = data.verdict;
-  const abuse = data.abuse_data;
-
-  if (!verdict || !abuse) {
-    // Pas de verdict calculable (ex: indicateur non reconnu, ou hash détecté)
+  if(!query){
+    alert("Veuillez saisir une adresse IP.");
     return;
   }
 
-  const level = verdict.level; // low | medium | high
-  const score = verdict.score;
+  document.getElementById("errorCard").classList.add("hidden");
+  document.getElementById("traceCard").classList.add("hidden");
+  document.getElementById("resultCard").classList.add("hidden");
 
-  verdictCard.innerHTML = `
-    <div class="verdict-top">
-      <span class="verdict-label">Verdict — ${escapeHtml(abuse.ip || '')}</span>
-      <span class="verdict-badge ${level}">${verdict.label}</span>
-    </div>
-    <div class="score-row">
-      <span class="score-num ${level}">${score}</span>
-      <span class="score-max">/ 100 score de confiance d'abus</span>
-    </div>
-    <div class="score-bar-track">
-      <div class="score-bar-fill ${level}" id="scoreBar"></div>
-    </div>
-    <div class="details-grid">
-      <div class="detail-item">
-        <div class="detail-key">Pays</div>
-        <div class="detail-val">${escapeHtml(abuse.country || 'Inconnu')}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-key">FAI / Organisation</div>
-        <div class="detail-val">${escapeHtml(abuse.isp || 'Inconnu')}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-key">Signalements</div>
-        <div class="detail-val">${abuse.total_reports ?? 0}</div>
-      </div>
-      <div class="detail-item">
-        <div class="detail-key">Liste blanche</div>
-        <div class="detail-val">${abuse.is_whitelisted ? 'Oui' : 'Non'}</div>
-      </div>
-    </div>
-  `;
+  try{
+    const response = await fetch(API_URL,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        query:query
+      })
+    });
 
-  verdictCard.classList.add('visible');
+    const data = await response.json();
+    console.log(data);
 
-  // Anime la barre de score après insertion dans le DOM
-  requestAnimationFrame(() => {
-    const bar = document.getElementById('scoreBar');
-    if (bar) bar.style.width = score + '%';
-  });
+    if(!response.ok){
+      throw new Error(
+        data.errors?.join("\n")
+        || "Erreur côté serveur"
+      );
+    }
+
+    renderTrace(data);
+    renderResult(data);
+
+  }catch(err){
+    document.getElementById("errorCard")
+      .classList.remove("hidden");
+    document.getElementById("errorText")
+      .textContent = err.message;
+  }
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+function renderTrace(data){
+  const card = document.getElementById("traceCard");
+  const body = document.getElementById("traceBody");
+
+  body.innerHTML = "";
+
+  (data.reasoning_steps || []).forEach(step=>{
+    const p = document.createElement("p");
+    p.textContent = "› " + step;
+    body.appendChild(p);
+  });
+
+  card.classList.remove("hidden");
+}
+
+function renderResult(data){
+  const verdict = data.verdict || {};
+  const abuse = data.abuse_data || {};
+
+  document.getElementById("verdict").innerHTML = `
+    <p><strong>IP :</strong> ${abuse.ip || "-"}</p>
+    <p><strong>Niveau :</strong> ${verdict.label || "-"}</p>
+    <p><strong>Score :</strong> ${verdict.score ?? "-"}/100</p>
+    <p><strong>Pays :</strong> ${abuse.country || "-"}</p>
+    <p><strong>ISP :</strong> ${abuse.isp || "-"}</p>
+    <p><strong>Signalements :</strong> ${abuse.total_reports ?? 0}</p>
+  `;
+
+  document.getElementById("llm-analysis").textContent =
+      data.llm_analysis || "Aucune analyse générée.";
+
+  document.getElementById("resultCard")
+      .classList.remove("hidden");
 }
 </script>
 

@@ -1,85 +1,219 @@
-#!/usr/bin/env python3
-"""
-===============================================================================
- BACKEND FLASK — Agent IA de Threat Intelligence
-===============================================================================
-
-Ce serveur expose l'agent existant (ThreatIntelAgent) via une API REST,
-pour qu'une page web (frontend.html) puisse l'interroger.
-
-Endpoint principal :
-    POST /api/analyze
-    Body JSON : { "query": "Cette IP 185.220.101.45 est-elle suspecte ?" }
-    Réponse   : le contexte complet de raisonnement de l'agent (JSON)
-
-Lancement :
-    pip install flask flask-cors requests
-    python app.py
-    -> ouvre http://localhost:5000 dans ton navigateur
-===============================================================================
-"""
-
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify
 from flask_cors import CORS
+from dotenv import load_dotenv
+from groq import Groq
+import requests
+import os
+import ipaddress
 
-# On réutilise directement la logique de l'agent, sans rien dupliquer.
-from agent import ThreatIntelAgent
+# Charger les variables d'environnement
+load_dotenv()
 
-app = Flask(__name__, static_folder=".")
-CORS(app)  # autorise les appels depuis le frontend (utile en dev local)
+app = Flask(__name__)
+CORS(app)
 
-agent = ThreatIntelAgent()
+# Chargement des clés API
+ABUSE_API_KEY = os.getenv("ABUSE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+# Vérification des clés
+if not ABUSE_API_KEY:
+    raise ValueError("ABUSE_API_KEY introuvable dans le fichier .env")
+
+if not GROQ_API_KEY:
+    raise ValueError("GROQ_API_KEY introuvable dans le fichier .env")
+
+# Client Groq
+groq_client = Groq(api_key=GROQ_API_KEY)
 
 
-@app.route("/")
-def index():
-    """Sert directement la page frontend pour un lancement en un seul clic."""
-    return send_from_directory(".", "frontend.html")
+@app.route('/')
+def home():
+    return "CyberShield API is running"
 
 
-@app.route("/api/analyze", methods=["POST"])
+@app.route('/api/analyze', methods=['POST'])
 def analyze():
-    """
-    Reçoit une requête utilisateur, exécute l'agent, et retourne
-    le contexte de raisonnement complet (étapes, tool utilisés, verdict).
-    """
-    body = request.get_json(silent=True) or {}
-    user_query = (body.get("query") or "").strip()
-
-    if not user_query:
-        return jsonify({"error": "Le champ 'query' est requis."}), 400
-
     try:
-        ctx = agent.run(user_query)
-        return jsonify(build_response(ctx))
-    except Exception as e:
-        # Garde-fou global : l'agent ne doit jamais planter le serveur.
-        return jsonify({"error": f"Erreur interne de l'agent : {e}"}), 500
+        data = request.get_json()
 
+        if not data:
+            return jsonify({
+                "errors": ["Aucune donnée reçue."]
+            }), 400
 
-def build_response(ctx) -> dict:
-    """
-    Transforme le contexte de l'agent en une réponse JSON exploitable
-    par le frontend, avec un verdict pré-calculé pour l'affichage.
-    """
-    data = ctx.to_dict()
+        indicator = data.get("query", "").strip()
 
-    abuse_data = ctx.tool_results.get("abuseipdb")
-    verdict = None
+        if not indicator:
+            return jsonify({
+                "errors": ["Veuillez saisir une adresse IP."]
+            }), 400
 
-    if abuse_data and abuse_data.get("success"):
-        score = abuse_data["abuse_score"]
+        # Vérifier que c'est bien une IP
+        try:
+            ipaddress.ip_address(indicator)
+        except ValueError:
+            return jsonify({
+                "errors": [
+                    "AbuseIPDB supporte uniquement les adresses IP."
+                ]
+            }), 400
+
+        # ------------------------
+        # Appel AbuseIPDB
+        # ------------------------
+        headers = {
+            "Key": ABUSE_API_KEY,
+            "Accept": "application/json"
+        }
+
+        params = {
+            "ipAddress": indicator,
+            "maxAgeInDays": 90
+        }
+
+        response = requests.get(
+            "https://api.abuseipdb.com/api/v2/check",
+            headers=headers,
+            params=params,
+            timeout=20
+        )
+
+        print("ABUSE STATUS :", response.status_code)
+        print("ABUSE RESPONSE :", response.text)
+
+        if not response.ok:
+            return jsonify({
+                "errors": [
+                    f"Erreur AbuseIPDB ({response.status_code})",
+                    response.text
+                ]
+            }), response.status_code
+
+        result = response.json().get("data", {})
+
+        score = result.get("abuseConfidenceScore", 0)
+        reports = result.get("totalReports", 0)
+        country = result.get("countryCode", "Unknown")
+        isp = result.get("isp", "Unknown")
+
+        abuse_data = {
+            "ip": indicator,
+            "country": country,
+            "isp": isp,
+            "total_reports": reports,
+            "score": score,
+            "is_whitelisted":
+                result.get("isWhitelisted", False),
+            "usage_type":
+                result.get("usageType", "Unknown"),
+            "domain":
+                result.get("domain", "Unknown")
+        }
+
+        # ------------------------
+        # Calcul du risque
+        # ------------------------
         if score >= 75:
-            verdict = {"level": "high", "label": "Risque élevé", "score": score}
-        elif score >= 25:
-            verdict = {"level": "medium", "label": "Risque moyen", "score": score}
-        else:
-            verdict = {"level": "low", "label": "Risque faible", "score": score}
+            level = "high"
+            label = "Risque élevé"
 
-    data["verdict"] = verdict
-    data["abuse_data"] = abuse_data
-    return data
+        elif score >= 40:
+            level = "medium"
+            label = "Risque moyen"
+
+        else:
+            level = "low"
+            label = "Faible risque"
+
+        verdict = {
+            "level": level,
+            "label": label,
+            "score": score
+        }
+
+        reasoning_steps = [
+            f"IP analysée : {indicator}",
+            f"Pays : {country}",
+            f"Fournisseur : {isp}",
+            f"Nombre de signalements : {reports}",
+            f"Score de confiance : {score}/100",
+            f"Niveau de risque : {label}"
+        ]
+
+        # ------------------------
+        # Analyse IA avec Groq
+        # ------------------------
+        prompt = f"""
+Tu es un analyste SOC spécialisé en Threat Intelligence.
+
+Adresse IP : {indicator}
+Pays : {country}
+Fournisseur : {isp}
+Nombre de signalements : {reports}
+Score d'abus : {score}/100
+Niveau de risque : {label}
+
+Produis :
+
+1. Une explication du risque.
+2. Les menaces potentielles.
+3. Les actions de remédiation.
+4. Une conclusion courte.
+"""
+
+        llm_analysis = ""
+
+        try:
+            completion = groq_client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {
+                        "role": "system",
+                        "content":
+                            "Tu es un expert SOC et Threat Intelligence."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3,
+                max_tokens=700
+            )
+
+            llm_analysis = (
+                completion
+                .choices[0]
+                .message
+                .content
+            )
+
+        except Exception as e:
+            llm_analysis = (
+                f"Erreur Groq : {str(e)}"
+            )
+
+        # ------------------------
+        # Réponse finale
+        # ------------------------
+        return jsonify({
+            "reasoning_steps": reasoning_steps,
+            "verdict": verdict,
+            "abuse_data": abuse_data,
+            "llm_analysis": llm_analysis,
+            "errors": []
+        })
+
+    except Exception as e:
+        return jsonify({
+            "errors": [str(e)]
+        }), 500
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )
