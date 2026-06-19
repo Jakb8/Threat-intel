@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Support - CyberShield</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="ticketing.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="index.html">
+                <i class="bi bi-shield-shaded me-2"></i>CyberShield
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="menu">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#services">Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#about">À propos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="auth.html">Connexion</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="ticketing.html">Support</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Ticket Header -->
+    <div class="ticket-header">
+        <div class="container">
+            <h1 class="ticket-title">Centre de support</h1>
+            <p class="ticket-subtitle">Notre équipe d'experts est disponible 24/7 pour répondre à vos questions</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="ticketing-wrapper">
+        <div class="container">
+            <div class="row">
+                <!-- New Ticket Card -->
+                <div class="col-12 mb-4">
+                    <div class="ticket-card text-center" id="newTicketCard">
+                        <i class="bi bi-plus-circle text-warning card-icon"></i>
+                        <h5 class="mt-3">Créer un nouveau ticket</h5>
+                        <p class="text-muted mb-0">Ouvrir un ticket de support</p>
+                    </div>
+                </div>
+                
+                <!-- Knowledge Base -->
+                <div class="col-12">
+                    <div class="ticket-card">
+                        <h4 class="mb-4">Base de connaissances</h4>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="kb-article" data-article="vpn">
+                                    <i class="bi bi-shield-lock text-warning kb-icon"></i>
+                                    <h6>Configuration VPN</h6>
+                                    <small>Guide pas à pas</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="kb-article" data-article="antivirus">
+                                    <i class="bi bi-shield-check text-warning kb-icon"></i>
+                                    <h6>Mise à jour antivirus</h6>
+                                    <small>Résoudre les problèmes</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="kb-article" data-article="2fa">
+                                    <i class="bi bi-key text-warning kb-icon"></i>
+                                    <h6>Authentification 2FA</h6>
+                                    <small>Configuration sécurisée</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="kb-article" data-article="backup">
+                                    <i class="bi bi-database text-warning kb-icon"></i>
+                                    <h6>Sauvegarde</h6>
+                                    <small>Protection des données</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="kb-article" data-article="phishing">
+                                    <i class="bi bi-exclamation-triangle text-warning kb-icon"></i>
+                                    <h6>Prévention phishing</h6>
+                                    <small>Reconnaître les menaces</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="kb-article" data-article="network">
+                                    <i class="bi bi-wifi text-warning kb-icon"></i>
+                                    <h6>Problèmes réseau</h6>
+                                    <small>Diagnostic rapide</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Ticket Modal -->
+    <div class="modal fade" id="newTicketModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Créer un nouveau ticket</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newTicketForm">
+                        <div class="mb-3">
+                            <label class="form-label">Sujet <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="ticketSubject" required>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Catégorie <span class="text-danger">*</span></label>
+                                <select class="form-control" id="ticketCategory" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="vpn">Problème VPN</option>
+                                    <option value="antivirus">Antivirus / Malware</option>
+                                    <option value="network">Réseau / Connectivité</option>
+                                    <option value="access">Problème d'accès</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Priorité <span class="text-danger">*</span></label>
+                                <select class="form-control" id="ticketPriority" required>
+                                    <option value="basse">Basse</option>
+                                    <option value="moyenne" selected>Moyenne</option>
+                                    <option value="haute">Haute</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="ticketDescription" rows="5" required></textarea>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Pièces jointes</label>
+                            <input type="file" class="form-control" id="ticketAttachments" multiple>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-warning" id="createTicketBtn">Créer le ticket</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                    <h5 class="fw-bold">CyberShield</h5>
+                    <p>Protection numérique depuis 2011</p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <div class="mb-3">
+                        <a href="index.html" class="text-white mx-3">Accueil</a>
+                        <a href="index.html#services" class="text-white mx-3">Services</a>
+                        <a href="index.html#about" class="text-white mx-3">À propos</a>
+                        <a href="auth.html" class="text-white mx-3">Connexion</a>
+                    </div>
+                    <p class="mb-0">© 2026 CyberShield</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="ticketing.js"></script>
+</body>
+</html>
