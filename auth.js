@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('✅ auth.js chargé');
-    
-    // Éléments DOM
     const elements = {
         loginTab: document.getElementById('loginTab'),
         signupTab: document.getElementById('signupTab'),
@@ -14,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
         strengthText: document.getElementById('strengthText')
     };
 
-    // Gestion des onglets
     const switchTab = (activeTab, activeForm, hiddenTab, hiddenForm) => {
         activeTab.classList.add('active');
         hiddenTab.classList.remove('active');
@@ -23,42 +19,42 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     if (elements.loginTab) {
-        elements.loginTab.addEventListener('click', () => 
+        elements.loginTab.addEventListener('click', () =>
             switchTab(elements.loginTab, elements.loginForm, elements.signupTab, elements.signupForm)
         );
     }
 
     if (elements.signupTab) {
-        elements.signupTab.addEventListener('click', () => 
+        elements.signupTab.addEventListener('click', () =>
             switchTab(elements.signupTab, elements.signupForm, elements.loginTab, elements.loginForm)
         );
     }
 
-    // Connexion
     if (elements.loginBtn) {
         elements.loginBtn.addEventListener('click', () => {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPassword').value;
-            
+
             if (!email || !password) {
-                alert('Veuillez remplir tous les champs');
+                showToast('Veuillez remplir tous les champs', 'warning');
                 return;
             }
-            
+
             const user = AppData.users.find(u => u.email === email && u.password === password);
-            
+
             if (user) {
                 sessionStorage.setItem('user', JSON.stringify(user));
                 AppData.currentUser = user;
-                alert('Connexion réussie!');
-                window.location.href = user.role === 'admin' ? 'dashboard.html' : 'ticketing.html';
+                showToast('Connexion réussie ! Bienvenue ' + user.name, 'success');
+                setTimeout(() => {
+                    window.location.href = user.role === 'admin' ? 'dashboard.html' : 'ticketing.html';
+                }, 500);
             } else {
-                alert('Email ou mot de passe incorrect');
+                showToast('Email ou mot de passe incorrect', 'error');
             }
         });
     }
 
-    // Inscription
     if (elements.signupBtn) {
         elements.signupBtn.addEventListener('click', () => {
             const name = document.getElementById('signupName')?.value;
@@ -66,44 +62,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const password = document.getElementById('signupPassword')?.value;
             const confirm = document.getElementById('confirmPassword')?.value;
             const terms = document.getElementById('acceptTerms')?.checked;
-            
+
             if (!name || !email || !password || !confirm) {
-                alert('Remplissez tous les champs');
+                showToast('Remplissez tous les champs', 'warning');
                 return;
             }
-            
+
             if (password !== confirm) {
-                alert('Les mots de passe ne correspondent pas');
+                showToast('Les mots de passe ne correspondent pas', 'error');
                 return;
             }
-            
+
             if (!terms) {
-                alert('Acceptez les conditions');
+                showToast('Acceptez les conditions d\'utilisation', 'warning');
                 return;
             }
-            
+
             if (AppData.users.some(u => u.email === email)) {
-                alert('Email déjà utilisé');
+                showToast('Cet email est déjà utilisé', 'error');
                 return;
             }
-            
+
             const newUser = {
                 id: AppData.users.length + 1,
-                name, 
-                email, 
+                name,
+                email,
                 password,
-                role: 'client'
+                role: 'client',
+                phone: ''
             };
-            
+
             AppData.users.push(newUser);
             sessionStorage.setItem('user', JSON.stringify(newUser));
             AppData.currentUser = newUser;
-            alert('Compte créé avec succès!');
-            window.location.href = 'ticketing.html';
+            showToast('Compte créé avec succès ! Bienvenue ' + name, 'success');
+            setTimeout(() => {
+                window.location.href = 'ticketing.html';
+            }, 500);
         });
     }
 
-    // Force du mot de passe
     if (elements.passwordInput) {
         const strengthLevels = [
             { text: 'Entrez un mot de passe', class: '', width: '0' },
@@ -112,29 +110,29 @@ document.addEventListener('DOMContentLoaded', () => {
             { text: 'Mot de passe fort', class: 'strong', width: '100%' }
         ];
 
-        elements.passwordInput.addEventListener('input', function() {
+        elements.passwordInput.addEventListener('input', function () {
             const password = this.value;
-            
+
             if (password.length === 0) {
                 elements.strengthBar.className = 'strength-bar';
                 elements.strengthBar.style.width = '0';
                 if (elements.strengthText) elements.strengthText.textContent = strengthLevels[0].text;
                 return;
             }
-            
+
             const hasLower = /[a-z]/.test(password);
             const hasUpper = /[A-Z]/.test(password);
             const hasNumber = /[0-9]/.test(password);
             const hasSpecial = /[$@#&!]/.test(password);
             const isLongEnough = password.length >= 8;
-            
+
             const checks = [hasLower, hasUpper, hasNumber, hasSpecial, isLongEnough];
             const strength = checks.filter(Boolean).length;
-            
-            let level = 1; // weak
-            if (strength >= 4) level = 3; // strong
-            else if (strength >= 2) level = 2; // medium
-            
+
+            let level = 1;
+            if (strength >= 4) level = 3;
+            else if (strength >= 2) level = 2;
+
             elements.strengthBar.className = 'strength-bar';
             if (level > 0) elements.strengthBar.classList.add(strengthLevels[level].class);
             elements.strengthBar.style.width = strengthLevels[level].width;
