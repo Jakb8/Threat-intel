@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.npy
+Thumbs.db
+Thumbs.db:encryptable
+*Zone.Identifier*
+~$*
+opencode-shannon-plugin/
+threatintel_old2.html

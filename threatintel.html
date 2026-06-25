@@ -112,6 +112,21 @@ pre {
     overflow: auto;
     color: #a0aec0;
 }
+.llm-card {
+    background: linear-gradient(135deg, #0f1a2e, #162240);
+    border: 1px solid #2a3a5c;
+    border-radius: 12px;
+    padding: 25px;
+    margin-top: 20px;
+}
+.llm-card h5 { color: #3ddc97; margin-bottom: 15px; }
+.llm-card .llm-content {
+    color: #d8dee9;
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+.llm-card .llm-content strong { color: #ffc107; }
+.llm-card .llm-content h6 { color: #3ddc97; margin-top: 1rem; }
 </style>
 </head>
 <body>
@@ -140,68 +155,125 @@ pre {
 <div class="hero">
     <div class="container">
         <h1><i class="bi bi-shield-fill-check text-warning me-2"></i>Threat Intelligence</h1>
-        <p>Analysez la réputation des IP, domaines et indicateurs de compromission (IOC)</p>
+        <p>Analyse IOC + Recherche semantique dans les rapports HackerOne (RAG)</p>
         <span class="api-status">
             <span class="api-dot" id="statusDot"></span>
-            <span id="statusText">Vérification API...</span>
+            <span id="statusText">Verification API...</span>
         </span>
     </div>
 </div>
 
 <div class="container">
-    <div class="console-card">
-        <label class="fw-bold mb-2"><i class="bi bi-terminal me-2"></i>Entrez un texte contenant des IOC</label>
-        <textarea id="input" placeholder="Ex: Vérifie cette IP 185.220.101.45 et le domaine google.com"></textarea>
-        <div class="d-flex align-items-center gap-3 mt-3">
-            <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
-                <i class="bi bi-search me-1"></i> Analyser
+    <ul class="nav nav-tabs mb-4" style="border-bottom-color: #1f2733;">
+        <li class="nav-item">
+            <button class="nav-link active" style="color: #d8dee9; background: #10151d; border-color: #1f2733;" onclick="switchTab('ioc')" id="tabIoc">
+                <i class="bi bi-terminal me-1"></i> Analyse IOC
             </button>
-            <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('input').value=''">
-                <i class="bi bi-x-circle"></i> Effacer
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" style="color: #d8dee9; background: transparent; border-color: transparent;" onclick="switchTab('rag')" id="tabRag">
+                <i class="bi bi-search me-1"></i> Recherche RAG
             </button>
-            <div id="loading" class="text-info d-none">
-                <span class="spinner-border spinner-border-sm me-2"></span>Analyse en cours...
+        </li>
+    </ul>
+
+    <div id="tabIocContent">
+        <div class="console-card">
+            <label class="fw-bold mb-2"><i class="bi bi-terminal me-2"></i>Entrez un texte contenant des IOC</label>
+            <textarea id="input" placeholder="Ex: Verifie cette IP 185.220.101.45 et le domaine google.com"></textarea>
+            <div class="d-flex align-items-center gap-3 mt-3">
+                <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">
+                    <i class="bi bi-search me-1"></i> Analyser
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('input').value=''">
+                    <i class="bi bi-x-circle"></i> Effacer
+                </button>
+                <div id="loading" class="text-info d-none">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Analyse en cours...
+                </div>
             </div>
         </div>
-    </div>
 
-    <div id="resultCard" class="d-none">
-        <div class="result-card">
-            <div class="row align-items-center">
-                <div class="col-md-3 text-center">
-                    <div class="score-ring" id="scoreRing">0</div>
-                    <small class="text-muted">Score de risque</small>
-                </div>
-                <div class="col-md-9">
-                    <h5>Résultats</h5>
-                    <div class="row text-center">
-                        <div class="col-4">
-                            <h3 class="text-warning mb-0" id="ipCount">0</h3>
-                            <small class="text-muted">IPs</small>
-                        </div>
-                        <div class="col-4">
-                            <h3 class="text-info mb-0" id="domainCount">0</h3>
-                            <small class="text-muted">Domaines</small>
-                        </div>
-                        <div class="col-4">
-                            <h3 class="text-success mb-0" id="emailCount">0</h3>
-                            <small class="text-muted">Emails</small>
+        <div id="resultCard" class="d-none">
+            <div class="result-card">
+                <div class="row align-items-center">
+                    <div class="col-md-3 text-center">
+                        <div class="score-ring" id="scoreRing">0</div>
+                        <small class="text-muted">Score de risque</small>
+                    </div>
+                    <div class="col-md-9">
+                        <h5>Resultats</h5>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <h3 class="text-warning mb-0" id="ipCount">0</h3>
+                                <small class="text-muted">IPs</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-info mb-0" id="domainCount">0</h3>
+                                <small class="text-muted">Domaines</small>
+                            </div>
+                            <div class="col-4">
+                                <h3 class="text-success mb-0" id="emailCount">0</h3>
+                                <small class="text-muted">Emails</small>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div class="result-card">
+                <h5><i class="bi bi-code-slash me-2"></i>Donnees brutes</h5>
+                <pre id="json">Aucune donnee</pre>
+            </div>
+
+            <div class="llm-card d-none" id="llmCard">
+                <h5><i class="bi bi-robot me-2"></i>Analyse IA (Groq LLM)</h5>
+                <div class="llm-content" id="llmContent"></div>
+            </div>
         </div>
 
-        <div class="result-card">
-            <h5><i class="bi bi-code-slash me-2"></i>Données brutes</h5>
-            <pre id="json">Aucune donnée</pre>
+        <div id="errorCard" class="d-none">
+            <div class="result-card border-danger">
+                <h5 class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Erreur</h5>
+                <p id="error" class="mb-0"></p>
+            </div>
         </div>
     </div>
 
-    <div id="errorCard" class="d-none">
-        <div class="result-card border-danger">
-            <h5 class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Erreur</h5>
-            <p id="error" class="mb-0"></p>
+    <div id="tabRagContent" class="d-none">
+        <div class="console-card">
+            <label class="fw-bold mb-2"><i class="bi bi-search me-2"></i>Recherche semantique dans les rapports HackerOne</label>
+            <textarea id="ragInput" placeholder="Ex: Quelles sont les vulnerabilites SQL trouvees dans Unico IDTech ?"></textarea>
+            <div class="d-flex align-items-center gap-3 mt-3">
+                <button class="btn-analyze" id="ragBtn" onclick="searchRag()">
+                    <i class="bi bi-search me-1"></i> Rechercher
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('ragInput').value=''">
+                    <i class="bi bi-x-circle"></i> Effacer
+                </button>
+                <div id="ragLoading" class="text-info d-none">
+                    <span class="spinner-border spinner-border-sm me-2"></span>Recherche en cours...
+                </div>
+            </div>
+        </div>
+
+        <div id="ragResultCard" class="d-none">
+            <div class="result-card">
+                <h5><i class="bi bi-file-text me-2"></i>Documents pertinents</h5>
+                <div id="ragDocs"></div>
+            </div>
+
+            <div class="llm-card">
+                <h5><i class="bi bi-robot me-2"></i>Analyse contextuelle (RAG + Groq)</h5>
+                <div class="llm-content" id="ragResponse"></div>
+            </div>
+        </div>
+
+        <div id="ragErrorCard" class="d-none">
+            <div class="result-card border-danger">
+                <h5 class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Erreur RAG</h5>
+                <p id="ragError" class="mb-0"></p>
+            </div>
         </div>
     </div>
 </div>
@@ -301,6 +373,13 @@ async function analyze() {
         document.getElementById('json').textContent =
             JSON.stringify(data.analysis, null, 2);
 
+        const llmCard = document.getElementById('llmCard');
+        const llmContent = document.getElementById('llmContent');
+        if (data.llm_analysis) {
+            llmContent.innerHTML = data.llm_analysis.replace(/\n/g, '<br>');
+            llmCard.classList.remove('d-none');
+        }
+
         resultCard.classList.remove('d-none');
 
         let msg = `Analyse terminée — Score: ${score}/100`;
@@ -319,6 +398,94 @@ async function analyze() {
 document.getElementById('input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.ctrlKey) analyze();
 });
+document.getElementById('ragInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.ctrlKey) searchRag();
+});
+
+function switchTab(tab) {
+    document.getElementById('tabIocContent').classList.add('d-none');
+    document.getElementById('tabRagContent').classList.add('d-none');
+    document.getElementById('tabIoc').className = 'nav-link';
+    document.getElementById('tabIoc').style.cssText = 'color: #d8dee9; background: transparent; border-color: transparent;';
+    document.getElementById('tabRag').className = 'nav-link';
+    document.getElementById('tabRag').style.cssText = 'color: #d8dee9; background: transparent; border-color: transparent;';
+
+    if (tab === 'ioc') {
+        document.getElementById('tabIocContent').classList.remove('d-none');
+        document.getElementById('tabIoc').className = 'nav-link active';
+        document.getElementById('tabIoc').style.cssText = 'color: #d8dee9; background: #10151d; border-color: #1f2733;';
+    } else {
+        document.getElementById('tabRagContent').classList.remove('d-none');
+        document.getElementById('tabRag').className = 'nav-link active';
+        document.getElementById('tabRag').style.cssText = 'color: #d8dee9; background: #10151d; border-color: #1f2733;';
+    }
+}
+
+async function searchRag() {
+    const query = document.getElementById('ragInput').value.trim();
+    if (!query) {
+        showToast('Veuillez entrer une requete', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('ragBtn');
+    const loading = document.getElementById('ragLoading');
+    const resultCard = document.getElementById('ragResultCard');
+    const errorCard = document.getElementById('ragErrorCard');
+
+    btn.disabled = true;
+    loading.classList.remove('d-none');
+    resultCard.classList.add('d-none');
+    errorCard.classList.add('d-none');
+
+    try {
+        const res = await fetch(API + '/rag', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ query })
+        });
+
+        if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || `Erreur HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        const docsDiv = document.getElementById('ragDocs');
+        docsDiv.innerHTML = '';
+
+        if (data.documents && data.documents.length > 0) {
+            data.documents.forEach((doc, i) => {
+                const div = document.createElement('div');
+                div.className = 'mb-2 p-2';
+                div.style.cssText = 'background: #0a0e14; border-radius: 8px; border-left: 3px solid #ffc107;';
+                div.innerHTML = `
+                    <small class="text-muted">[${i+1}] ${doc.source} (p.${doc.page}) — pertinence: ${(doc.score * 100).toFixed(1)}%</small>
+                    <p class="mb-0 mt-1" style="font-size: 0.85rem; color: #a0aec0;">${doc.text.substring(0, 200)}...</p>
+                `;
+                docsDiv.appendChild(div);
+            });
+        } else {
+            docsDiv.innerHTML = '<p class="text-muted">Aucun document pertinent trouve.</p>';
+        }
+
+        const responseDiv = document.getElementById('ragResponse');
+        if (data.response) {
+            responseDiv.innerHTML = data.response.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        resultCard.classList.remove('d-none');
+        showToast('Recherche RAG terminee', 'success');
+
+    } catch (err) {
+        document.getElementById('ragError').textContent = err.message;
+        errorCard.classList.remove('d-none');
+        showToast('Erreur RAG : ' + err.message, 'error');
+    }
+
+    btn.disabled = false;
+    loading.classList.add('d-none');
+}
 </script>
 </body>
 </html>

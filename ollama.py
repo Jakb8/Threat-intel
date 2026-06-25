@@ -1,19 +1,5 @@
-import ollama
-
-prompt = f"""
-IP : {ip}
-Score AbuseIPDB : {score}
-Pays : {country}
-FAI : {isp}
-
-Explique le risque et donne des recommandations.
 """
-
-response = ollama.chat(
-    model='llama3',
-    messages=[
-        {"role": "user", "content": prompt}
-    ]
-)
-
-analysis = response["message"]["content"]
+Module LLM remplacé par groq.py
+Utilise désormais l'API Groq (llama3-70b-8192) via groq.py
+"""
+from groq import analyze_threats, groq_chat
