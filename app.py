@@ -1,15 +1,8 @@
 import re
-import os
 import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from groq import analyze_threats
-
-try:
-    from rag import RAGSystem
-    RAG_AVAILABLE = True
-except Exception:
-    RAG_AVAILABLE = False
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -101,41 +94,6 @@ def analyze():
     iocs = extract_iocs(text)
     result = analyze_iocs(iocs)
     return jsonify(result)
-
-
-rag_system = None
-if RAG_AVAILABLE:
-    EMBEDDINGS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rag_embeddings.json")
-    try:
-        rag_system = RAGSystem()
-        if os.path.exists(EMBEDDINGS_FILE):
-            rag_system.load_index()
-            print(f"RAG pret: {len(rag_system.chunks)} chunks indexes")
-        else:
-            print("RAG : index non trouve. Lance d'abord python3 rag.py")
-    except Exception as e:
-        print(f"RAG non disponible: {e}")
-        rag_system = None
-
-
-@app.route("/rag", methods=["POST"])
-def rag_query():
-    if rag_system is None:
-        return jsonify({"error": "RAG non disponible"}), 503
-    data = request.get_json()
-    query = data.get("query", "").strip()
-    if not query:
-        return jsonify({"error": "Requete vide"}), 400
-    try:
-        results = rag_system.retrieve(query)
-        docs = [
-            {"source": c.source, "page": c.page, "text": c.text[:300], "score": s}
-            for c, s in zip(results.chunks, results.scores)
-        ]
-        response = rag_system.generate(query)
-        return jsonify({"query": query, "documents": docs, "response": response})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

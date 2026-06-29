@@ -7,4 +7,11 @@ Thumbs.db:encryptable
 *Zone.Identifier*
 ~$*
 opencode-shannon-plugin/
-threatintel_old2.html
+# Old/backup files
+app_old*.py
+app_work*.py
+app_lasttest*.py
+threatintel_old*.html
+test.html
+ollama.py
+read.py
